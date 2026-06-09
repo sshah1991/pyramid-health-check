@@ -26,13 +26,13 @@ Most test suites drift over time — too many slow E2E tests, not enough fast un
 ## Report Preview
 
 **Layer stats, pyramid diagram, and actual vs benchmark chart**
-![Layer stats, pyramid diagram and benchmark chart](docs/report-preview-1.png)
+![Layer stats, pyramid diagram and benchmark chart](docs/report-preview-3.png)
 
 **Diagnosis, dual tag strategy, and execution scope distribution**
 ![Diagnosis, tag strategy and execution scope](docs/report-preview-2.png)
 
 **Differentiated recommendations and searchable file breakdown table**
-![Recommendations and file breakdown table](docs/report-preview-3.png)
+![Recommendations and file breakdown table](docs/report-preview-1.png)
 
 ---
 
