@@ -1,0 +1,27 @@
+{
+  "name": "pyramid-agent",
+  "version": "1.0.0",
+  "description": "AI-powered test pyramid analyzer for Playwright and Jest projects",
+  "main": "src/agent.js",
+  "bin": {
+    "pyramid-agent": "./bin/pyramid-agent.js"
+  },
+  "scripts": {
+    "start": "node bin/pyramid-agent.js"
+  },
+  "keywords": [
+    "testing",
+    "test-pyramid",
+    "playwright",
+    "jest",
+    "qa",
+    "ai",
+    "claude"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {}
+}

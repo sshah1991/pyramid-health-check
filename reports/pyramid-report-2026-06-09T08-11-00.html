@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pyramid Health Report — tests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #F7F8FC;
+    --surface:  #FFFFFF;
+    --border:   #E2E8F0;
+    --border2:  #CBD5E0;
+    --text:     #1A202C;
+    --muted:    #718096;
+    --muted2:   #A0AEC0;
+    --unit:     #0694A2;
+    --int:      #2B6CB0;
+    --e2e:      #7C3AED;
+    --green:    #276749;
+    --yellow:   #B7791F;
+    --red:      #C53030;
+    --radius:   10px;
+    --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 64px;
+  }
+
+  .page { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Top bar ── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    margin-bottom: 32px;
+  }
+  .topbar-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 24px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 20px; }
+  .logo { font-size: 20px; font-weight: 800; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .logo span { color: var(--unit); }
+  .meta-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .meta-pill {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+  /* Score pill in topbar */
+  .score-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px 6px 8px;
+    border-radius: 24px;
+    border: 1.5px solid;
+    font-weight: 700;
+  }
+  .score-pill .score-num {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .score-pill .score-text { font-size: 13px; font-weight: 700; }
+  .score-pill .score-sub  { font-size: 10px; font-weight: 500; opacity: .7; }
+
+  /* Download button */
+  .dl-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .dl-btn:hover { background: #2D3748; transform: translateY(-1px); }
+  .dl-btn:active { transform: translateY(0); }
+
+  /* ── Grid ── */
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media(max-width:640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #4A5568;
+    margin-bottom: 14px;
+  }
+
+  /* ── Stat cards ── */
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stat-body { flex: 1; min-width: 0; }
+  .stat-layer { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+  .stat-count { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--text); }
+  .stat-pct   { font-size: 12px; color: var(--muted); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+  .stat-bar-wrap { margin-top: 8px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 4px; }
+  .stat-dev {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Diagnosis card ── */
+  .diagnosis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .pattern-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .pattern-icon-wrap {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .pattern-name { font-size: 18px; font-weight: 800; }
+  .pattern-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .pattern-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  /* Pattern stats inline */
+  .pattern-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .pattern-stat { font-size: 12px; color: var(--muted); }
+  .pattern-stat strong { color: var(--text); font-weight: 700; }
+
+  /* ── Tag strategy ── */
+  .tag-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 14px; }
+  .tag-col-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted2); margin-bottom: 10px; }
+  .tag-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .tag-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    min-width: 130px;
+    text-align: center;
+  }
+  .tag-desc { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .bench-note {
+    padding: 10px 14px;
+    background: #F7F8FC;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    border-left: 3px solid var(--border2);
+    line-height: 1.5;
+  }
+
+  /* ── Execution scope ── */
+  .exec-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .exec-row:last-child { margin-bottom: 0; }
+  .exec-label { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; width: 90px; flex-shrink: 0; }
+  .exec-bar-wrap { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .exec-bar-fill { height: 100%; border-radius: 4px; }
+  .exec-count { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); width: 64px; text-align: right; flex-shrink: 0; }
+  .exec-note { font-size: 11px; color: var(--muted2); width: 200px; flex-shrink: 0; }
+
+  /* ── Recommendations ── */
+  .rec-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .rec-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .rec-list li.ok {
+    background: #F0FFF4;
+    border: 1px solid #9AE6B4;
+    color: var(--green);
+  }
+  .rec-list li.over {
+    background: #FFFBEB;
+    border: 1px solid #F6AD55;
+  }
+  .rec-list li.under {
+    background: #FFF5F5;
+    border: 1px solid #FEB2B2;
+  }
+  .rec-icon-wrap {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .rec-icon-wrap.over  { background: #ECC94B; color: #744210; }
+  .rec-icon-wrap.under { background: #FC8181; color: #742A2A; }
+  .rec-icon { font-size: 16px; flex-shrink: 0; }
+
+  /* ── Dark mode ── */
+  body.dark {
+    --bg:      #0F1117;
+    --surface: #1A1D27;
+    --border:  #2D3148;
+    --border2: #3D4468;
+    --text:    #E2E8F0;
+    --muted:   #718096;
+    --muted2:  #4A5568;
+    --shadow:  0 1px 3px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.4);
+  }
+  body.dark .topbar { background: rgba(26,29,39,0.88); }
+  body.dark thead th { background: #1A1D27; }
+  body.dark .bench-note { background: #0F1117; }
+  body.dark .rec-list li.over  { background: #2D2410; border-color: #C05621; }
+  body.dark .rec-list li.under { background: #2D1515; border-color: #C53030; }
+  body.dark .rec-list li.ok    { background: #1A2D20; border-color: #276749; }
+  body.dark .score-pill { filter: brightness(0.85); }
+
+  .dark-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--muted);
+    transition: background .15s;
+  }
+  .dark-toggle:hover { background: var(--bg); }
+
+  /* ── Table search ── */
+  .table-search-wrap { margin-bottom: 12px; }
+  .table-search {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 12px center;
+  }
+  .table-search:focus { border-color: var(--unit); box-shadow: 0 0 0 3px rgba(6,148,162,.12); }
+  .no-results { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  .table-scroll { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    background: var(--bg);
+  }
+  thead th:hover { color: var(--text); }
+  thead th::after { content: ' ↕'; opacity: 0.3; font-size: 10px; }
+  thead th.asc::after  { content: ' ↑'; opacity: 1; }
+  thead th.desc::after { content: ' ↓'; opacity: 1; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  .td-file {
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .td-file-inner { display: flex; align-items: center; gap: 6px; }
+  .copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: var(--muted2);
+    opacity: 0;
+    transition: opacity .15s, color .15s;
+    flex-shrink: 0;
+    font-size: 11px;
+    line-height: 1;
+  }
+  tbody tr:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--unit); background: var(--bg); }
+  .td-num {
+    padding: 12px 14px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .td-num.zero { color: var(--muted2); opacity: 0.45; font-weight: 400; }
+  .td-badge { padding: 12px 14px; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* ── Toast ── */
+  .share-toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    opacity: 0;
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: var(--shadow-md);
+  }
+  .share-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted2);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .footer a { color: var(--muted); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <span class="logo">▲ pyramid<span>-health</span></span>
+      <div class="meta-pills">
+        <span class="meta-pill">tests</span>
+        <span class="meta-pill">6 files</span>
+        <span class="meta-pill">176 tests</span>
+        <span class="meta-pill">9 June 2026</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="score-pill" style="color:#276749;background:#F0FFF4;border-color:#9AE6B4">
+        <div class="score-num" style="background:#276749;color:#fff">89</div>
+        <div>
+          <div class="score-text">Healthy</div>
+          <div class="score-sub">Health Score</div>
+        </div>
+      </div>
+      <button class="dark-toggle" id="darkToggle" title="Toggle dark mode">🌙</button>
+      <a class="dl-btn" id="downloadReport" href="#">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </a>
+    </div>
+  </div>
+</div>
+<div class="share-toast" id="shareToast"></div>
+
+<div class="page">
+
+  <!-- Layer stat cards -->
+  <div class="grid-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#E6FFFA;color:var(--unit)">U</div>
+      <div class="stat-body">
+        <div class="stat-layer" style="color:var(--unit)">Unit · @layer-unit</div>
+        <div class="stat-count">52</div>
+        <div class="stat-pct">29.5% actual &nbsp;/&nbsp; 15% target</div>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:29.5%;background:var(--unit)"></div></div>
+        <div class="stat-dev" style="color:#B7791F;background:#FFFBEB;border:1px solid #F6E05E">▲ +14.5% vs benchmark</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#EBF4FF;color:var(--int)">I</div>
+      <div class="stat-body">
+        <div class="stat-layer" style="color:var(--int)">Integration · @layer-integration</div>
+        <div class="stat-count">47</div>
+        <div class="stat-pct">26.7% actual &nbsp;/&nbsp; 25% target</div>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:26.7%;background:var(--int)"></div></div>
+        <div class="stat-dev" style="color:#276749;background:#F0FFF4;border:1px solid #9AE6B4">▲ +1.7% vs benchmark</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FAF5FF;color:var(--e2e)">E</div>
+      <div class="stat-body">
+        <div class="stat-layer" style="color:var(--e2e)">E2E · @layer-e2e</div>
+        <div class="stat-count">77</div>
+        <div class="stat-pct">43.8% actual &nbsp;/&nbsp; 60% target</div>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:43.8%;background:var(--e2e)"></div></div>
+        <div class="stat-dev" style="color:#C53030;background:#FFF5F5;border:1px solid #FEB2B2">▼ -16.2% vs benchmark</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pyramid + Bar chart -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Pyramid Diagram</div>
+      
+    <svg viewBox="0 0 340 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:320px;display:block;margin:0 auto;">
+      <polygon points="10,220 330,220 274,124 66,124" fill="#7C3AED" opacity="0.9"/>
+      <text x="170" y="177" text-anchor="middle" fill="white" font-size="13" font-family="Inter,sans-serif" font-weight="700">E2E 43.8%</text>
+      <polygon points="66,124 274,124 218,65 122,65" fill="#2B6CB0" opacity="0.9"/>
+      <text x="170" y="99.5" text-anchor="middle" fill="white" font-size="12" font-family="Inter,sans-serif" font-weight="700">Integration 26.7%</text>
+      <polygon points="122,65 218,65 172,4 168,4" fill="#0694A2" opacity="0.9"/>
+      <text x="170" y="42.5" text-anchor="middle" fill="white" font-size="11" font-family="Inter,sans-serif" font-weight="700">Unit 29.5%</text>
+      <line x1="10" y1="88" x2="330" y2="88" stroke="#94A3B8" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="10" y1="33.00000000000001" x2="330" y2="33.00000000000001" stroke="#94A3B8" stroke-width="1" stroke-dasharray="4,3"/>
+    </svg>
+      <div style="display:flex;gap:14px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted)"><span style="color:var(--unit)">■</span> Unit</span>
+        <span style="font-size:11px;color:var(--muted)"><span style="color:var(--int)">■</span> Integration</span>
+        <span style="font-size:11px;color:var(--muted)"><span style="color:var(--e2e)">■</span> E2E</span>
+        <span style="font-size:11px;color:var(--muted)"><span style="color:#94A3B8">- -</span> benchmark</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Actual vs Benchmark</div>
+      <canvas id="barChart" style="max-height:200px"></canvas>
+    </div>
+  </div>
+
+  <!-- Diagnosis + Tag Strategy -->
+  <div class="diagnosis-grid">
+    <div class="card">
+      <div class="card-title">Diagnosis</div>
+      <div class="pattern-row">
+        <div class="pattern-icon-wrap" style="background:#27674918">✅</div>
+        <div>
+          <div class="pattern-name" style="color:#276749">Healthy Pyramid</div>
+        </div>
+      </div>
+      <div class="pattern-desc">Pyramid shape is well balanced against the Testing Trophy benchmark.</div>
+      <div class="pattern-divider"></div>
+      <div class="pattern-stats">
+        <div class="pattern-stat">Files scanned <strong>6</strong></div>
+        <div class="pattern-stat">Total tests <strong>176</strong></div>
+        <div class="pattern-stat">Health score <strong style="color:#276749">89/100</strong></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tag Strategy — Dual Tag Approach</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Each test carries a <strong style="color:var(--text)">pyramid tag</strong> (layer) and an <strong style="color:var(--text)">execution tag</strong> (when it runs).</p>
+      <div class="tag-cols">
+        <div>
+          <div class="tag-col-title">Pyramid Layer</div>
+          <div class="tag-row"><span class="tag-chip" style="background:#E6FFFA;color:var(--unit);border:1px solid #81E6D9">@layer-unit</span><span class="tag-desc">→ Unit</span></div>
+          <div class="tag-row"><span class="tag-chip" style="background:#EBF4FF;color:var(--int);border:1px solid #90CDF4">@layer-integration</span><span class="tag-desc">→ Integration</span></div>
+          <div class="tag-row"><span class="tag-chip" style="background:#FAF5FF;color:var(--e2e);border:1px solid #D6BCFA">@layer-e2e</span><span class="tag-desc">→ E2E</span></div>
+        </div>
+        <div>
+          <div class="tag-col-title">Execution Scope</div>
+          <div class="tag-row"><span class="tag-chip" style="background:#E6FFFA;color:var(--unit);border:1px solid #81E6D9">@smoke</span><span class="tag-desc">→ Every deploy</span></div>
+          <div class="tag-row"><span class="tag-chip" style="background:#EBF4FF;color:var(--int);border:1px solid #90CDF4">@sanity</span><span class="tag-desc">→ Post-deploy</span></div>
+          <div class="tag-row"><span class="tag-chip" style="background:#FAF5FF;color:var(--e2e);border:1px solid #D6BCFA">@regression</span><span class="tag-desc">→ Scheduled</span></div>
+        </div>
+      </div>
+      <div class="bench-note">test('Login', { tag: ['@smoke', '@layer-e2e'] })</div>
+    </div>
+  </div>
+
+  <!-- Execution Scope -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Execution Scope Distribution</div>
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:center">
+      <div style="display:flex;align-items:center;justify-content:center">
+        <canvas id="execChart" width="180" height="180" style="max-width:180px;max-height:180px"></canvas>
+      </div>
+      <div>
+        <div class="exec-row">
+          <span class="exec-label" style="color:var(--unit)">@smoke</span>
+          <div class="exec-bar-wrap"><div class="exec-bar-fill" style="width:12%;background:var(--unit)"></div></div>
+          <span class="exec-count">21 tests</span>
+          <span class="exec-note">Critical path — every deploy</span>
+        </div>
+        <div class="exec-row">
+          <span class="exec-label" style="color:var(--int)">@sanity</span>
+          <div class="exec-bar-wrap"><div class="exec-bar-fill" style="width:23%;background:var(--int)"></div></div>
+          <span class="exec-count">41 tests</span>
+          <span class="exec-note">Post-deploy verification</span>
+        </div>
+        <div class="exec-row">
+          <span class="exec-label" style="color:var(--e2e)">@regression</span>
+          <div class="exec-bar-wrap"><div class="exec-bar-fill" style="width:65%;background:var(--e2e)"></div></div>
+          <span class="exec-count">114 tests</span>
+          <span class="exec-note">Full suite — scheduled runs</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Recommendations</div>
+    <ul class="rec-list"><li class="over"><span class="rec-icon-wrap over">▲</span>Refactor some <strong>unit (@layer-unit)</strong> tests to a lower layer — currently <strong>14.5% over</strong> the benchmark</li><li class="under"><span class="rec-icon-wrap under">▼</span>Add more <strong>e2e (@layer-e2e)</strong> tests — currently <strong>16.2% below</strong> the benchmark</li></ul>
+  </div>
+
+  <!-- File table -->
+  <div class="card">
+    <div class="card-title">File Breakdown</div>
+    <div class="table-search-wrap">
+      <input type="text" id="tableSearch" class="table-search" placeholder="Filter files by name...">
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table id="fileTable">
+          <thead>
+            <tr>
+              <th data-col="0">File</th>
+              <th data-col="1">@smoke</th>
+              <th data-col="2">@sanity</th>
+              <th data-col="3">@regression</th>
+              <th data-col="4">Total</th>
+              <th data-col="5">Dominant</th>
+            </tr>
+          </thead>
+          <tbody>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">AdminEventManagement/adminEvent.spec.ts</span>
+            <button class="copy-btn" data-path="AdminEventManagement/adminEvent.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num">13</td>
+        <td class="td-num">13</td>
+        <td class="td-num">15</td>
+        <td class="td-num">41</td>
+        <td class="td-badge"><span class="badge" style="background:#FAF5FF;color:#7C3AED;border:1px solid #7C3AED40">@regression</span></td>
+      </tr>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Authentication/auth.spec.ts</span>
+            <button class="copy-btn" data-path="Authentication/auth.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num">14</td>
+        <td class="td-num">6</td>
+        <td class="td-num">29</td>
+        <td class="td-num">49</td>
+        <td class="td-badge"><span class="badge" style="background:#FAF5FF;color:#7C3AED;border:1px solid #7C3AED40">@regression</span></td>
+      </tr>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">BookingManagement/booking.spec.ts</span>
+            <button class="copy-btn" data-path="BookingManagement/booking.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num">12</td>
+        <td class="td-num">12</td>
+        <td class="td-num">14</td>
+        <td class="td-num">38</td>
+        <td class="td-badge"><span class="badge" style="background:#FAF5FF;color:#7C3AED;border:1px solid #7C3AED40">@regression</span></td>
+      </tr>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">EventBrowsing/eventBrowsing.spec.ts</span>
+            <button class="copy-btn" data-path="EventBrowsing/eventBrowsing.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num">11</td>
+        <td class="td-num">1</td>
+        <td class="td-num">11</td>
+        <td class="td-num">23</td>
+        <td class="td-badge"><span class="badge" style="background:#E6FFFA;color:#0694A2;border:1px solid #0694A240">@smoke</span></td>
+      </tr>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">SandboxLimits/sandbox.spec.ts</span>
+            <button class="copy-btn" data-path="SandboxLimits/sandbox.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num">2</td>
+        <td class="td-num">6</td>
+        <td class="td-num">5</td>
+        <td class="td-num">13</td>
+        <td class="td-badge"><span class="badge" style="background:#EBF4FF;color:#2B6CB0;border:1px solid #2B6CB040">@sanity</span></td>
+      </tr>
+      <tr>
+        <td class="td-file">
+          <div class="td-file-inner">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">SecurityAndIsolation/crossUserSecurity.spec.ts</span>
+            <button class="copy-btn" data-path="SecurityAndIsolation/crossUserSecurity.spec.ts" title="Copy path">⎘</button>
+          </div>
+        </td>
+        <td class="td-num zero">0</td>
+        <td class="td-num">9</td>
+        <td class="td-num">3</td>
+        <td class="td-num">12</td>
+        <td class="td-badge"><span class="badge" style="background:#EBF4FF;color:#2B6CB0;border:1px solid #2B6CB040">@sanity</span></td>
+      </tr></tbody>
+        </table>
+        <div class="no-results" id="noResults" style="display:none">No files match your search.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    pyramid-health &nbsp;·&nbsp; generated 9 June 2026 &nbsp;·&nbsp;
+    Built by <a href="https://github.com/sshah1991/pyramid-health-check" target="_blank">Sumeet Shah</a> &nbsp;·&nbsp;
+    <a href="https://github.com/sshah1991/pyramid-health-check" target="_blank">github.com/sshah1991/pyramid-health-check</a>
+  </div>
+
+</div>
+
+<script>
+// Donut chart
+const ed = {"labels":["@smoke","@sanity","@regression"],"data":[21,41,114]};
+new Chart(document.getElementById('execChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ed.labels,
+    datasets: [{ data: ed.data, backgroundColor: ['#0694A2dd','#2B6CB0dd','#7C3AEDdd'], borderColor: ['#fff','#fff','#fff'], borderWidth: 3, hoverOffset: 6 }]
+  },
+  options: {
+    responsive: false,
+    animation: { animateRotate: true, duration: 800 },
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#718096', font: { size: 11, family: 'Inter' }, padding: 12, boxWidth: 10 } },
+      tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw + ' tests' } }
+    },
+    cutout: '65%',
+  }
+});
+
+// Bar chart
+const d = {"layers":["Unit (@layer-unit)","Integration (@layer-integration)","E2E (@layer-e2e)"],"actual":[29.5,26.7,43.8],"benchmark":[15,25,60]};
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels: d.layers,
+    datasets: [
+      { label: 'Actual %',    data: d.actual,    backgroundColor: ['#0694A2cc','#2B6CB0cc','#7C3AEDcc'], borderRadius: 5 },
+      { label: 'Benchmark %', data: d.benchmark, backgroundColor: ['#0694A230','#2B6CB030','#7C3AED30'], borderRadius: 5, borderWidth: 1.5, borderColor: ['#0694A2','#2B6CB0','#7C3AED'] },
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { labels: { color: '#718096', font: { size: 11 } } } },
+    scales: {
+      x: { max: 100, grid: { color: '#E2E8F0' }, ticks: { color: '#718096', callback: v => v + '%' } },
+      y: { grid: { display: false }, ticks: { color: '#4A5568', font: { size: 11 } } }
+    }
+  }
+});
+
+// Dark mode toggle
+const darkToggle = document.getElementById('darkToggle');
+darkToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  darkToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+});
+
+// Table search filter
+const searchInput = document.getElementById('tableSearch');
+const noResults   = document.getElementById('noResults');
+searchInput.addEventListener('input', () => {
+  const q     = searchInput.value.toLowerCase();
+  const rows  = document.querySelectorAll('#fileTable tbody tr');
+  let visible = 0;
+  rows.forEach(row => {
+    const name = row.cells[0].textContent.toLowerCase();
+    const show = name.includes(q);
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  noResults.style.display = visible === 0 ? 'block' : 'none';
+});
+
+// Click-to-copy file paths
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const p = btn.dataset.path;
+    navigator.clipboard.writeText(p).then(() => {
+      btn.textContent = '✓';
+      btn.style.color = '#276749';
+      setTimeout(() => { btn.textContent = '⎘'; btn.style.color = ''; }, 1500);
+    });
+  });
+});
+
+// Sortable table
+const table = document.getElementById('fileTable');
+let sortCol = -1, sortAsc = true;
+table.querySelectorAll('th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = +th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+    table.querySelectorAll('th').forEach(h => h.classList.remove('asc','desc'));
+    th.classList.add(sortAsc ? 'asc' : 'desc');
+    const tbody = table.querySelector('tbody');
+    const rows  = [...tbody.querySelectorAll('tr')];
+    rows.sort((a, b) => {
+      const av = a.cells[col].textContent.trim();
+      const bv = b.cells[col].textContent.trim();
+      const cmp = isNaN(parseFloat(av)) ? av.localeCompare(bv) : parseFloat(av) - parseFloat(bv);
+      return sortAsc ? cmp : -cmp;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  });
+});
+
+// Download
+function showToast(msg) {
+  const t = document.getElementById('shareToast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+document.getElementById('downloadReport').addEventListener('click', e => {
+  e.preventDefault();
+  const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'pyramid-health-tests-2026-06-09.html' });
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Report downloaded');
+});
+</script>
+</body>
+</html>
