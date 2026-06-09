@@ -23,11 +23,16 @@ Most test suites drift over time — too many slow E2E tests, not enough fast un
 
 ---
 
-## Demo
+## Report Preview
 
-![Pyramid Health Report](docs/report-preview.png)
+**Layer stats, pyramid diagram, and actual vs benchmark chart**
+![Layer stats, pyramid diagram and benchmark chart](docs/report-preview-1.png)
 
-> *Light-mode HTML report with interactive charts, sortable file table, dark mode toggle, and per-file copy paths.*
+**Diagnosis, dual tag strategy, and execution scope distribution**
+![Diagnosis, tag strategy and execution scope](docs/report-preview-2.png)
+
+**Differentiated recommendations and searchable file breakdown table**
+![Recommendations and file breakdown table](docs/report-preview-3.png)
 
 ---
 
